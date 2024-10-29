@@ -1,5 +1,5 @@
 //Tools
-import { createContext, useEffect, useContext, useReducer } from 'react';
+import { createContext, useEffect, useContext, useReducer, useCallback } from 'react';
 import PropTypes from 'prop-types';
 
 //Variables
@@ -62,19 +62,23 @@ function CitiesProvider({ children }) {
     fetchCities();
   }, []);
 
+  //As we use the getCity function in another place inside an useEffect and we have to add it to the dependency array it will be re-rendered each time the getCity function is re-created as a result of the function get city itself that updates the state in the context, it renders again all this component so it creates an infinite loop with that effect, therefore we make this function stable with the useCallback storing it in the cache so whenever it is re-rendered will not be re-created if the result is the same
   //Used by City APP to get the current marked city
-  async function getCity(id) {
-    if (Number(id) === Number(currentCity.id)) return;
-    dispatch({ type: 'loading' });
-    try {
-      const res = await fetch(`${BASE_URL}/cities?id=${id}`);
-      const data = await res.json();
-      dispatch({ type: 'city/loaded', payload: data[0] });
-    } catch (err) {
-      dispatch({ type: 'rejected', payload: 'There was an error loading city...' });
-      console.log(err.message);
-    }
-  }
+  const getCity = useCallback(
+    async function getCity(id) {
+      if (Number(id) === Number(currentCity.id)) return;
+      dispatch({ type: 'loading' });
+      try {
+        const res = await fetch(`${BASE_URL}/cities?id=${id}`);
+        const data = await res.json();
+        dispatch({ type: 'city/loaded', payload: data[0] });
+      } catch (err) {
+        dispatch({ type: 'rejected', payload: 'There was an error loading city...' });
+        console.log(err.message);
+      }
+    },
+    [currentCity.id]
+  );
 
   //Adding city data to the Fake-API
   async function createCity(newCity) {
